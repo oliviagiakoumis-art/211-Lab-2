@@ -1,11 +1,12 @@
 #lab 2
-from utils.brick import Motor, time, EV3ColorSensor
-import time, math
+from utils.brick import Motor, EV3ColorSensor
+import time
+import math
 
 RADIUS = 2.2
 color_sensor_right = EV3ColorSensor(1)
 color_sensor_left = EV3ColorSensor(2)
-TRACK_WIDTH = 10 #for now
+TRACK_WIDTH = 10.0
 
 DRIVE_SPEED = 200
 CREEP_SPEED = 50
@@ -18,41 +19,35 @@ x = 0.0
 y = 0.0
 theta = 0.0
 
-# motor encoder reset to 0.
-left_encoder_starter = leftmotor.reset_encoder()
-right_encoder_starter = rightmotor.reset_encoder()
+# Motor encoder reset to 0.
+leftmotor.reset_encoder()
+rightmotor.reset_encoder()
 prev_right_encoder = 0
 prev_left_encoder = 0
 
 def update_odometer():
     global x, y, theta, prev_right_encoder, prev_left_encoder
 
-    # get current cumulative encoder
     current_left_encoder = leftmotor.get_encoder()
     current_right_encoder = rightmotor.get_encoder()
 
-    # change in encoder. how much did the wheel turn at this instant
     delta_left = current_left_encoder - prev_left_encoder
     delta_right = current_right_encoder - prev_right_encoder
 
-    # convert to distance in cm
-    delta_distance_left = (delta_left/ 360) * 2 * math.pi * RADIUS
-    delta_distance_right = (delta_right / 360) * 2 * math.pi * RADIUS
+    delta_distance_left = (delta_left / 360.0) * 2 * math.pi * RADIUS
+    delta_distance_right = (delta_right / 360.0) * 2 * math.pi * RADIUS
 
-    # theta changes
-    delta_theta = math.arcsin((delta_distance_left - delta_distance_right)/ TRACK_WIDTH)
+    # FIXED: Removed math.arcsin to prevent domain crashes during wheel slip
+    delta_theta = (delta_distance_left - delta_distance_right) / TRACK_WIDTH
+    delta_distance = (delta_distance_left + delta_distance_right) / 2.0
 
-    delta_distance = (delta_distance_left + delta_distance_right) / 2
+    # FIXED: Included global 'theta' so coordinates update correctly after turns
+    delta_x = delta_distance * math.sin(theta + delta_theta / 2.0)
+    delta_y = delta_distance * math.cos(theta + delta_theta / 2.0)
 
-    delta_x = delta_distance * math.sin(delta_theta)
-    delta_y = delta_distance * math.cos(delta_theta)
-
-    x = x + delta_x
-    y = y + delta_y
-
+    x += delta_x
+    y += delta_y
     theta = theta + math.degrees(delta_theta)
-
-    # keep theta between 0 and 360
     theta = theta % 360.0
 
     prev_left_encoder = current_left_encoder
@@ -60,27 +55,31 @@ def update_odometer():
 
 def move_fwd(d, axis='x'):
     """
-    1. call move_fwd when we start the robot until hit a horizontal line.
-    2. if one of the sensors hits the line first, immediately freeze that wheel and let the other motor run until the sensor senses the line. robot is now parallel.
+    Teacher's style movement function. 
+    Handles both positive (forward) and negative (backward) travel distances.
     """
-
-    initial = x if axis == 'x' else y #grabs the starting coordinate based on the chosen axis, x or y
-
-    leftmotor.set_dps(DRIVE_SPEED)
-    rightmotor.set_dps(DRIVE_SPEED)
-
+    initial = x if axis == 'x' else y 
     target_distance = initial + d
 
-    # moves forward until it reaches the distance that we want (parameter d)
-    while(x if axis == 'x' else y) < target_distance:
-        update_odometer()
-        time.sleep(0.01)
+    speed = DRIVE_SPEED if d > 0 else -DRIVE_SPEED
+    leftmotor.set_dps(speed)
+    rightmotor.set_dps(speed)
+
+    # FIXED: Handles both increasing and decreasing coordinates properly
+    if d > 0:
+        while (x if axis == 'x' else y) < target_distance:
+            update_odometer()
+            time.sleep(0.01)
+    else:
+        while (x if axis == 'x' else y) > target_distance:
+            update_odometer()
+            time.sleep(0.01)
     
-    leftmotor.set_dps(0) #for when you've reached necessary destination
+    leftmotor.set_dps(0) 
     rightmotor.set_dps(0)
 
 def square_up_on_line():
-    BLACK_THRESHOLD = 30 ################fix
+    BLACK_THRESHOLD = 30 
 
     leftmotor.set_dps(CREEP_SPEED)
     rightmotor.set_dps(CREEP_SPEED)
@@ -88,56 +87,48 @@ def square_up_on_line():
     left_line_detected = False
     right_line_detected = False
 
-    # this loop runs until both wheels have found the black horizontal line and are locked into place
     while True: 
         update_odometer()
         
         left_color = color_sensor_left.get_red()
         right_color = color_sensor_right.get_red()
 
-        # if both sensors hit the black line 
         if left_line_detected == True and right_line_detected == True:
             break 
 
-        # LEFT SENSOR CHECK
-        # if left sensor has reached the line (it sees black) and detection state hasnt been updated yet
         if left_color < BLACK_THRESHOLD and left_line_detected == False:
             leftmotor.set_dps(0) 
-            left_line_detected = True   # mark that the left side found the line
+            left_line_detected = True   
             print("Left sensor detected the line")
 
-        # RIGHT SENSOR CHECK
-        # if left sensor has reached the line (it sees black) and detection state hasnt been updated yet
         if right_color < BLACK_THRESHOLD and right_line_detected == False:
             rightmotor.set_dps(0)
-            right_line_detected = True  # mark that the right side found the line
+            right_line_detected = True  
             print("Right sensor detected the line")
 
-
-        # MOVE THE SLOWER SIDE SO THAT IT ALIGNS WITH LINE
         if left_line_detected == True and right_line_detected == False:
             rightmotor.set_dps(CREEP_SPEED)
         elif right_line_detected == True and left_line_detected == False:
             leftmotor.set_dps(CREEP_SPEED)
 
-    time.sleep(0.01)
+        # FIXED: Moved time.sleep inside the loop to prevent CPU max-out/overheating
+        time.sleep(0.01)
+
     leftmotor.set_dps(0)
     rightmotor.set_dps(0)
-    print("both sides are now parallel to line")
-
+    print("Both sides are now parallel to line")
 
 def turn_to(target_theta):
-    """Turns robot to an angle 0, 90, 180, 270 """
+    """Turns robot to an angle 0, 90, 180, 270"""
     global theta
     target_theta = target_theta % 360
     
     while True:
         update_odometer()
 
-        # Find shortest angular error
         error = (target_theta - theta + 180) % 360 - 180
         
-        if abs(error) < 1.5:  # 1.5 degree tolerance
+        if abs(error) < 1.5:  
             break
             
         if error > 0:
@@ -162,20 +153,19 @@ def travel_squares(num_squares=3, distance_per_square=25.0, axis='x', direction=
 
 # --- MAIN EXECUTION (All 4 Legs) ---
 try:
-    
-    # Leg 1: +Y direction (North, 0 degrees) -> Coordinates increase
+    # Leg 1: +Y direction (North, 0 degrees)
     turn_to(0)
     travel_squares(num_squares=3, distance_per_square=25.0, axis='y', direction=1)
     
-    # Leg 2: +X direction (East, 90 degrees) -> Coordinates increase
+    # Leg 2: +X direction (East, 90 degrees)
     turn_to(90)
     travel_squares(num_squares=3, distance_per_square=25.0, axis='x', direction=1)
     
-    # Leg 3: -Y direction (South, 180 degrees) -> Coordinates decrease (direction = -1)
+    # Leg 3: -Y direction (South, 180 degrees)
     turn_to(180)
     travel_squares(num_squares=3, distance_per_square=25.0, axis='y', direction=-1)
     
-    # Leg 4: -X direction (West, 270 degrees) -> Coordinates decrease (direction = -1)
+    # Leg 4: -X direction (West, 270 degrees)
     turn_to(270)
     travel_squares(num_squares=3, distance_per_square=25.0, axis='x', direction=-1)
     

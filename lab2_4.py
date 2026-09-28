@@ -10,9 +10,9 @@ TRACK_WIDTH = 10.0
 
 BLACK_THRESHOLD = 30
 
-DRIVE_SPEED = 200
-CREEP_SPEED = 50
-TURN_SPEED = 50
+DRIVE_SPEED = 100
+CREEP_SPEED = 30
+TURN_SPEED = 30
 
 APPROACH_MARGIN = 6.0   # cm short of the line where we switch from DRIVE_SPEED to creeping
 SENSOR_OFFSET = 5.0     # cm from the wheel axle to the light sensors (measure this!)

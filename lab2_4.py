@@ -1,5 +1,4 @@
-#lab 2
-###### removed errors using ai
+# lab 2
 from utils.brick import Motor, EV3ColorSensor
 import time
 import math
@@ -9,9 +8,14 @@ color_sensor_right = EV3ColorSensor(1)
 color_sensor_left = EV3ColorSensor(2)
 TRACK_WIDTH = 10.0
 
+BLACK_THRESHOLD = 30
+
 DRIVE_SPEED = 200
 CREEP_SPEED = 50
 TURN_SPEED = 50
+
+APPROACH_MARGIN = 6.0   # cm short of the line where we switch from DRIVE_SPEED to creeping
+SENSOR_OFFSET = 5.0     # cm from the wheel axle to the light sensors (measure this!)
 
 leftmotor = Motor("C")
 rightmotor = Motor("B")
@@ -38,13 +42,11 @@ def update_odometer():
     delta_distance_left = (delta_left / 360.0) * 2 * math.pi * RADIUS
     delta_distance_right = (delta_right / 360.0) * 2 * math.pi * RADIUS
 
-    # FIXED: Removed math.arcsin to prevent domain crashes during wheel slip
     delta_theta = (delta_distance_left - delta_distance_right) / TRACK_WIDTH
     delta_distance = (delta_distance_left + delta_distance_right) / 2.0
 
-    # FIXED: Included global 'theta' so coordinates update correctly after turns
-    delta_x = delta_distance * math.sin(theta + delta_theta / 2.0)
-    delta_y = delta_distance * math.cos(theta + delta_theta / 2.0)
+    delta_x = delta_distance * math.sin(math.radians(theta) + delta_theta / 2.0)
+    delta_y = delta_distance * math.cos(math.radians(theta) + delta_theta / 2.0)
 
     x += delta_x
     y += delta_y
@@ -54,18 +56,19 @@ def update_odometer():
     prev_left_encoder = current_left_encoder
     prev_right_encoder = current_right_encoder
 
+    print(f"x: {x:6.2f} cm | y: {y:6.2f} cm | theta: {theta:5.1f}°")
+
 def move_fwd(d, axis='x'):
     """
-    handles both positive (forward) and negative (backward) travel distances
+    d > 0: coordinate on this axis increases, d < 0: it decreases.
+    The robot always drives forward (heading decides coordinate change direction).
     """
     initial = x if axis == 'x' else y 
     target_distance = initial + d
 
-    speed = DRIVE_SPEED if d > 0 else -DRIVE_SPEED
-    leftmotor.set_dps(speed)
-    rightmotor.set_dps(speed)
+    leftmotor.set_dps(DRIVE_SPEED)
+    rightmotor.set_dps(DRIVE_SPEED)
 
-    # FIXED: Handles both increasing and decreasing coordinates properly
     if d > 0:
         while (x if axis == 'x' else y) < target_distance:
             update_odometer()
@@ -79,8 +82,7 @@ def move_fwd(d, axis='x'):
     rightmotor.set_dps(0)
 
 def square_up_on_line():
-    BLACK_THRESHOLD = 30 
-
+    
     leftmotor.set_dps(CREEP_SPEED)
     rightmotor.set_dps(CREEP_SPEED)
 
@@ -93,25 +95,24 @@ def square_up_on_line():
         left_color = color_sensor_left.get_red()
         right_color = color_sensor_right.get_red()
 
-        if left_line_detected == True and right_line_detected == True:
+        if left_line_detected and right_line_detected:
             break 
 
-        if left_color < BLACK_THRESHOLD and left_line_detected == False:
+        if left_color < BLACK_THRESHOLD and not left_line_detected:
             leftmotor.set_dps(0) 
             left_line_detected = True   
             print("Left sensor detected the line")
 
-        if right_color < BLACK_THRESHOLD and right_line_detected == False:
+        if right_color < BLACK_THRESHOLD and not right_line_detected:
             rightmotor.set_dps(0)
             right_line_detected = True  
             print("Right sensor detected the line")
 
-        if left_line_detected == True and right_line_detected == False:
+        if left_line_detected and not right_line_detected:
             rightmotor.set_dps(CREEP_SPEED)
-        elif right_line_detected == True and left_line_detected == False:
+        elif right_line_detected and not left_line_detected:
             leftmotor.set_dps(CREEP_SPEED)
 
-        # FIXED: Moved time.sleep inside the loop to prevent CPU max-out/overheating
         time.sleep(0.01)
 
     leftmotor.set_dps(0)
@@ -143,31 +144,38 @@ def turn_to(target_theta):
     leftmotor.set_dps(0)
     rightmotor.set_dps(0)
 
-def travel_squares(num_squares=3, distance_per_square=25.0, axis='x', direction=1):
+def travel_squares(num_squares=3, distance_per_square=30.48, axis='x', direction=1):
     """Travels across multiple squares, squaring up on each line."""
-    total_distance = distance_per_square * direction
     for i in range(num_squares):
-        move_fwd(total_distance, axis=axis)
-        square_up_on_line()
+        if i == 0:
+            fast_distance = distance_per_square / 2 - SENSOR_OFFSET - APPROACH_MARGIN
+        else:
+            fast_distance = distance_per_square - APPROACH_MARGIN
+
+        move_fwd(fast_distance * direction, axis=axis)   # Fast phase
+        square_up_on_line()                              # Creep phase
         print(f"Squared up on line {i+1}")
 
-# --- MAIN EXECUTION (All 4 Legs) ---
+    # Drive past the 3rd line into the center of the target square before turning
+    move_fwd((distance_per_square / 2 + SENSOR_OFFSET) * direction, axis=axis)
+
+# main execution: 4 legs
 try:
     # Leg 1: +Y direction (North, 0 degrees)
     turn_to(0)
-    travel_squares(num_squares=3, distance_per_square=25.0, axis='y', direction=1)
+    travel_squares(num_squares=3, distance_per_square=30.48, axis='y', direction=1)
     
     # Leg 2: +X direction (East, 90 degrees)
     turn_to(90)
-    travel_squares(num_squares=3, distance_per_square=25.0, axis='x', direction=1)
+    travel_squares(num_squares=3, distance_per_square=30.48, axis='x', direction=1)
     
     # Leg 3: -Y direction (South, 180 degrees)
     turn_to(180)
-    travel_squares(num_squares=3, distance_per_square=25.0, axis='y', direction=-1)
+    travel_squares(num_squares=3, distance_per_square=30.48, axis='y', direction=-1)
     
     # Leg 4: -X direction (West, 270 degrees)
     turn_to(270)
-    travel_squares(num_squares=3, distance_per_square=25.0, axis='x', direction=-1)
+    travel_squares(num_squares=3, distance_per_square=30.48, axis='x', direction=-1)
     
     print("Full 4-sided path completed")
 

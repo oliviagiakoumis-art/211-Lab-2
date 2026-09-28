@@ -1,4 +1,5 @@
 #lab 2
+####### this is og code but it contains errors
 from utils.brick import Motor, time, EV3ColorSensor
 import time, math
 

@@ -80,16 +80,13 @@ def move_fwd(d):
     leftmotor.set_dps(0) 
     rightmotor.set_dps(0)
 
-def turn(turn_angle):
-    
-    initial= theta
+def turn():
+
     
     leftmotor.set_dps(TURN_SPEED)
     rightmotor.set_dps(-TURN_SPEED)
     
-    while(theta< initial + turn_angle):
-        update_odometer()
-        time.sleep(0.01)
+
 
 if __name__ == "__main__":
     try:
@@ -102,9 +99,11 @@ if __name__ == "__main__":
 
             if count >= 25:
                 move_fwd(15)
-                turn(90)
+                initial = theta
+                while(theta< initial + 90):
+                    turn()
                 count = 0
-                
+            update_odometer()    
     except BaseException:
         reset_brick()
         exit()

@@ -56,6 +56,7 @@ def update_odometer():
 
     prev_left_encoder = current_left_encoder
     prev_right_encoder = current_right_encoder
+    print(f"X: {x:.2f}, Y: {y:.2f}, O: {theta:.2f}")
 
 def float_motors():
     leftmotor.float_motor()
@@ -106,7 +107,6 @@ def turn(turn_angle):
 if __name__ == "__main__":
     try:
         while (True):
-            print(f"X: {x}, Y: {y}, O: {theta}")
             if START :
                 move_fwdy(15)
             else:

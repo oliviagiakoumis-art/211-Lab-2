@@ -35,28 +35,45 @@ prev_left_encoder = 0
 def update_odometer():
     global x, y, theta, prev_right_encoder, prev_left_encoder
 
-    current_left_encoder = -leftmotor.get_encoder()
+    # 1. Get current encoder values
+    current_left_encoder = leftmotor.get_encoder()
     current_right_encoder = rightmotor.get_encoder()
 
+    # 2. Compute change in encoder values
     delta_left = current_left_encoder - prev_left_encoder
     delta_right = current_right_encoder - prev_right_encoder
 
-    delta_distance_left = (delta_left / 360.0) * 2 * math.pi * RADIUS
-    delta_distance_right = (delta_right / 360.0) * 2 * math.pi * RADIUS
+    # 3. Convert encoder changes to wheel distances (cm)
+    delta_distance_left = (delta_left * 2 * math.pi * RADIUS) / 360.0
+    delta_distance_right = (delta_right * 2 * math.pi * RADIUS) / 360.0
 
-    delta_theta = (delta_distance_left - delta_distance_right) / TRACK_WIDTH
+    # 4. Compute change in theta
+    # asin gives radians, so convert to degrees
+    delta_theta = (180.0 / math.pi) * math.asin(
+        (delta_distance_left - delta_distance_right) / TRACK_WIDTH
+    )
+
+    # 5. Compute average distance traveled
     delta_distance = (delta_distance_left + delta_distance_right) / 2.0
 
-    delta_x = delta_distance * math.sin(math.radians(theta) + delta_theta / 2.0)
-    delta_y = delta_distance * math.cos(math.radians(theta) + delta_theta / 2.0)
+    # 6. Compute change in x and y
+    # Use theta + half of the change in theta
+    theta_mid = math.radians(theta + delta_theta / 2.0)
 
-    x += delta_x
-    y += delta_y
-    theta = (theta + math.degrees(delta_theta)) % 360.0
+    delta_x = delta_distance * math.sin(theta_mid)
+    delta_y = delta_distance * math.cos(theta_mid)
 
+    # 7. Update global position
+    x = x + delta_x
+    y = y + delta_y
+    theta = theta + delta_theta
+
+    # 8. Keep theta between 0 and 360 degrees
+    theta = theta % 360.0
+
+    # 9. Update previous encoder values
     prev_left_encoder = current_left_encoder
     prev_right_encoder = current_right_encoder
-    print(f"X: {x:.2f}, Y: {y:.2f}, O: {theta:.2f}")
 
 def float_motors():
     leftmotor.float_motor()
@@ -123,8 +140,7 @@ if __name__ == "__main__":
               
                 turn(90)
                 count = 0
-                START = not START
-            update_odometer()    
+                START = not START    
     except BaseException:
         reset_brick()
         exit()

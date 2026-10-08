@@ -324,7 +324,26 @@ def square_driver():
          
          
          
-         
+if __name__ == "__main__":
+    try:
+        print("Starting robot program... Press Ctrl+C to stop safely.")
+        square_driver()
+        
+    except KeyboardInterrupt:
+        # This code runs the second you press Ctrl + C
+        print("\nStopping robot safely due to KeyboardInterrupt...")
+        
+        # Cut power to the motors immediately
+        left_motor.set_dps(0)
+        right_motor.set_dps(0)
+        
+        # Reset the brick if your library provides a reset function
+        try:
+            reset_brick()
+        except NameError:
+            pass # Ignores it if reset_brick isn't imported
+            
+        print("Robot stopped and reset successfully.")
     
 
 

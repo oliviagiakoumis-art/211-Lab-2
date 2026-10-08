@@ -16,7 +16,7 @@ TURN_TIMEOUT = 10.0       # s: give up a turn if it takes this long
 
 # ---------- measure/tune these ----------
 RADIUS = 2.2            # cm, wheel radius
-TRACK_WIDTH = 10.0      # cm, distance between wheels
+TRACK_WIDTH = 10.5     # cm, distance between wheels
 SENSOR_OFFSET = 5.0     # cm from wheel axle to light sensors (measure this!)
 TILE = 30.48            # cm
 
@@ -76,7 +76,7 @@ def update_odometer():
     global x, y, theta, prev_right_encoder, prev_left_encoder
 
     current_left_encoder = -leftmotor.get_encoder()
-    current_right_encoder = rightmotor.get_encoder()
+    current_right_encoder = -rightmotor.get_encoder()
 
     delta_left = current_left_encoder - prev_left_encoder
     delta_right = current_right_encoder - prev_right_encoder

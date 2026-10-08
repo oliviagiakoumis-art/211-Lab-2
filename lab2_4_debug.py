@@ -4,7 +4,7 @@ import time
 import math
 
 # ---------- MODE: "RUN" (square), "TEST" (print sensors), "FLOAT" (TA float check) ----------
-MODE = "RUN"
+MODE = "FLOAT"
 
 # ---------- debug switches ----------
 DEBUG = True              # live sensor / state prints while running
@@ -16,16 +16,16 @@ TURN_TIMEOUT = 10.0       # s: give up a turn if it takes this long
 
 # ---------- measure/tune these ----------
 RADIUS = 2.2            # cm, wheel radius
-TRACK_WIDTH = 10.5     # cm, distance between wheels
-SENSOR_OFFSET = 5.0     # cm from wheel axle to light sensors (measure this!)
+TRACK_WIDTH = 10.5      # cm, distance between wheels
+SENSOR_OFFSET = 10.0     # cm from wheel axle to light sensors (measure this!)              # CHANGED!
 TILE = 30.48            # cm
 
-LEFT_THRESHOLD = 35         # EV3 left sensor (get_red below this = black)
-RIGHT_THRESHOLD = 3         # NXT right sensor (get_value below this = black)
+LEFT_THRESHOLD = 25         # EV3 left sensor (get_red below this = black)
+RIGHT_THRESHOLD = 6         # NXT right sensor (get_value below this = black)
 # -----------------------------------------------------------
 
 DRIVE_SPEED = -100
-CREEP_SPEED = -30
+CREEP_SPEED = -60
 TURN_SPEED = -30
 APPROACH_MARGIN = 6.0   # cm short of the line where we switch from fast to creeping
 
@@ -36,7 +36,7 @@ color_sensor_right = NXTColorSensor(1)   # NXT, port 1
 wait_ready_sensors()
 
 x = 0.0
-y = 0.0
+y = 0.0                                                     # NOTE: y-coord is where the wheel axle (center of wheel) is
 theta = 0.0
 
 leftmotor.reset_encoder()
@@ -117,7 +117,7 @@ def stop():
 def coord(axis):
     return x if axis == 'x' else y
 
-def move_to(target, axis, direction):
+def move_to(target, axis, direction):  # line - direction * (SENSOR_OFFSET + APPROACH_MARGIN), axis, direction
     """Drive forward until the axle's coordinate on `axis` reaches target."""
     if DEBUG:
         print(f"[MOVE] driving along {axis}, from {coord(axis):.1f} to {target:.1f}")

@@ -13,7 +13,7 @@ TILE = 30.48            # cm
 LEFT_THRESHOLD = 35         # EV3 left sensor (get_red below this = black)
 RIGHT_THRESHOLD = 3         # NXT right sensor (get_value below this = black)
 # -----------------------------------------------------------
-
+START = True
 DRIVE_SPEED = -100
 TURN_SPEED = -30
 count = 0
@@ -110,14 +110,19 @@ if __name__ == "main":
             print(f"X: {x}, Y: {y}, O: {theta}")
         else:
              while (True):
-                  
                 print(f"X: {x}, Y: {y}, O: {theta}")
+                if (START):
+                     move_fwdx()
+                else:
+                     move_fwdy()
+                     
                 if (color_sensor_right.get_value() < LEFT_THRESHOLD and color_sensor_right.get_value() <RIGHT_THRESHOLD):
                     count += 1
 
                 if count == 3:
                     turn(90)
                     count = 0
+                    START = False
                 
     except BaseException:
         reset_brick()

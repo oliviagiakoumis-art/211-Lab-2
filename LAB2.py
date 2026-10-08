@@ -103,26 +103,22 @@ def turn(turn_angle):
         update_odometer()
         time.sleep(0.01)
 
-if __name__ == "main":
+if __name__ == "__main__":
     try:
-        if MODE == "FLOAT":
-            float_motors()
+        while (True):
             print(f"X: {x}, Y: {y}, O: {theta}")
-        else:
-             while (True):
-                print(f"X: {x}, Y: {y}, O: {theta}")
-                if (START):
-                     move_fwdx()
-                else:
-                     move_fwdy()
-                     
-                if (color_sensor_right.get_value() < LEFT_THRESHOLD and color_sensor_right.get_value() <RIGHT_THRESHOLD):
-                    count += 1
+            if (START):
+                move_fwdx()
+            else:
+                move_fwdy()
 
-                if count == 3:
-                    turn(90)
-                    count = 0
-                    START = False
+            if (color_sensor_left.get_rgb()[0] < 100 and color_sensor_right.get_rgb() [0] < 600):
+                count += 1
+
+            if count == 3:
+                turn(90)
+                count = 0
+                START = not START
                 
     except BaseException:
         reset_brick()

@@ -68,24 +68,12 @@ def stop_robot():
     leftmotor.set_dps(0)
     rightmotor.set_dps(0)
 
-def move_fwdx(d):
+def move_fwd(d):
     
     initial = x
     leftmotor.set_dps(DRIVE_SPEED)
     rightmotor.set_dps(DRIVE_SPEED)
     while(x < initial + d):
-            update_odometer()
-            time.sleep(0.01)
-        
-    leftmotor.set_dps(0) 
-    rightmotor.set_dps(0)
-
-def move_fwdy(d):
-    
-    initial = y
-    leftmotor.set_dps(DRIVE_SPEED)
-    rightmotor.set_dps(DRIVE_SPEED)
-    while(y < initial + d):
             update_odometer()
             time.sleep(0.01)
         
@@ -107,18 +95,15 @@ if __name__ == "__main__":
     try:
         while (True):
             print(f"X: {x}, Y: {y}, O: {theta}")
-            if (START):
-                move_fwdx()
-            else:
-                move_fwdy()
+            move_fwd(15)
 
             if (color_sensor_left.get_rgb()[0] < 100 and color_sensor_right.get_rgb() [0] < 600):
                 count += 1
 
-            if count == 3:
+            if count >= 25:
+                move_fwd(15)
                 turn(90)
                 count = 0
-                START = not START
                 
     except BaseException:
         reset_brick()
